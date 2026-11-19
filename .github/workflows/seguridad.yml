@@ -1,0 +1,153 @@
+name: Seguridad (DevSecOps)
+
+# Revisiones de seguridad en paralelo + un job que junta los resultados.
+# En los PR corre solo; en develop/main lo llama pipeline.yml (etapa 2).
+on:
+  pull_request:
+    branches: [develop, main]
+  workflow_call:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 13 * * 1' # lunes 08:00 Lima: vulnerabilidades nuevas aunque nadie toque el código
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-seguridad-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secretos:
+    name: Secretos filtrados (Gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+      # CLI directo (no la action): la action falla en el primer push de un repo nuevo
+      # porque intenta revisar desde el padre del commit raíz, que no existe.
+      - name: Instalar Gitleaks
+        env:
+          VERSION: 8.24.3
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
+      - name: Buscar contraseñas y claves en todo el historial
+        run: |
+          set +e
+          gitleaks git --redact --verbose --report-format sarif --report-path gitleaks.sarif .
+          codigo=$?
+          set -e
+          if [ "$codigo" -eq 0 ]; then
+            echo "## Gitleaks: sin secretos en el historial" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## Gitleaks: se encontraron secretos (ver log, valores ocultos)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$codigo"
+      - name: Guardar reporte
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-gitleaks
+          path: gitleaks.sarif
+          if-no-files-found: ignore
+
+  sast:
+    name: SAST (CodeQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          build-mode: none
+          queries: security-extended
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: '/language:javascript-typescript'
+
+  sca:
+    name: SCA (npm audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '22'
+      - name: Reporte completo (informativo)
+        shell: bash
+        run: |
+          npm audit --json > auditoria.json || true
+          node -e '
+            const v = JSON.parse(require("fs").readFileSync("auditoria.json", "utf8")).metadata.vulnerabilities;
+            require("fs").appendFileSync(process.env.GITHUB_STEP_SUMMARY, [
+              "## npm audit", "| Severidad | Cantidad |", "|---|---|",
+              ...["critical", "high", "moderate", "low"].map((n) => `| ${n} | ${v[n]} |`),
+              "", "Bloquea solo lo que llega a producción con severidad alta o crítica.", ""].join("\n"));
+          '
+      - name: Bloquear si producción tiene vulnerabilidades altas
+        run: npm audit --omit=dev --audit-level=high
+
+  revision-dependencias:
+    name: Revisión de dependencias nuevas
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/dependency-review-action@v5
+        with:
+          fail-on-severity: high
+
+  rls:
+    name: Base de datos con RLS
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Toda tabla nueva debe activar Row Level Security
+        run: node scripts/verificar-rls.mjs
+
+  resultado:
+    name: Resultado de seguridad
+    needs: [secretos, sast, sca, revision-dependencias, rls]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Juntar los resultados
+        env:
+          SECRETOS: ${{ needs.secretos.result }}
+          SAST: ${{ needs.sast.result }}
+          SCA: ${{ needs.sca.result }}
+          REVISION: ${{ needs.revision-dependencias.result }}
+          RLS: ${{ needs.rls.result }}
+        run: |
+          {
+            echo "## Resultado de seguridad"
+            echo "| Revisión | Resultado |"
+            echo "|---|---|"
+            echo "| Secretos (Gitleaks) | $SECRETOS |"
+            echo "| SAST (CodeQL) | $SAST |"
+            echo "| SCA (npm audit) | $SCA |"
+            echo "| Dependencias nuevas | $REVISION |"
+            echo "| RLS en migraciones | $RLS |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          for r in "$SECRETOS" "$SAST" "$SCA" "$REVISION" "$RLS"; do
+            if [ "$r" != "success" ] && [ "$r" != "skipped" ]; then
+              echo "Al menos una revisión de seguridad falló."; exit 1
+            fi
+          done
+          echo "Todas las revisiones de seguridad pasaron."

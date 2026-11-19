@@ -1,0 +1,141 @@
+name: Pipeline DevSecOps
+
+# Cada push a develop (staging) o main (producción) muestra UN gráfico conectado:
+#   1. CI -> 2. Seguridad -> 3. Migraciones BD -> 4. Despliegue Vercel -> 5. Smoke -> 6. DAST (ZAP)
+# Si una etapa falla, las siguientes no corren.
+on:
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pipeline-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: 1. CI
+    uses: ./.github/workflows/ci.yml
+
+  seguridad:
+    name: 2. Seguridad
+    needs: ci
+    uses: ./.github/workflows/seguridad.yml
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+      security-events: write
+
+  migraciones:
+    name: 3. Migraciones BD (Supabase)
+    needs: seguridad
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Comprobar secretos
+        run: |
+          for v in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_ID; do
+            [ -n "${!v}" ] || { echo "Falta el secreto $v en Settings -> Secrets -> Actions"; exit 1; }
+          done
+      - name: Vincular el proyecto
+        run: npx supabase link --project-ref "$SUPABASE_PROJECT_ID" --password "$SUPABASE_DB_PASSWORD"
+      - name: Aplicar migraciones pendientes
+        run: |
+          npx supabase migration list --remote --password "$SUPABASE_DB_PASSWORD"
+          npx supabase db push --remote --yes --password "$SUPABASE_DB_PASSWORD"
+
+  despliegue:
+    name: 4. Despliegue (Vercel)
+    needs: migraciones
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      url: ${{ steps.publicar.outputs.url }}
+    environment:
+      name: ${{ github.ref_name == 'main' && 'produccion' || 'staging' }}
+      url: ${{ steps.publicar.outputs.url }}
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      ENTORNO: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
+      PROD: ${{ github.ref_name == 'main' && '--prod' || '' }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Instalar Vercel CLI
+        run: npm install --global vercel@65
+      - name: Traer configuración y variables de Vercel
+        run: vercel pull --yes --environment="$ENTORNO" --token="$VERCEL_TOKEN"
+      - name: Compilar
+        run: vercel build $PROD --token="$VERCEL_TOKEN"
+      - name: Publicar
+        id: publicar
+        run: |
+          url=$(vercel deploy --prebuilt $PROD --token="$VERCEL_TOKEN")
+          echo "Despliegue: $url"
+          # La URL única del despliegue está protegida por Vercel Authentication.
+          # En producción se prueba el dominio público (<proyecto>.vercel.app), que sale de la API.
+          if [ "$ENTORNO" = "production" ]; then
+            for intento in 1 2 3 4 5 6; do
+              publica=$(curl -sf -H "Authorization: Bearer $VERCEL_TOKEN" \
+                "https://api.vercel.com/v13/deployments/${url#https://}?teamId=$VERCEL_ORG_ID" \
+                | jq -r '[.alias[]? | select(endswith(".vercel.app"))] | sort_by(length) | .[0] // empty') || true
+              [ -n "$publica" ] && break
+              sleep 5
+            done
+            [ -n "$publica" ] && url="https://$publica"
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "### Publicado ($ENTORNO): $url" >> "$GITHUB_STEP_SUMMARY"
+
+  smoke:
+    name: 5. Smoke
+    needs: despliegue
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: '22'
+      - name: Probar la URL publicada
+        env:
+          URL_DESPLIEGUE: ${{ needs.despliegue.outputs.url }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: node scripts/smoke.mjs "$URL_DESPLIEGUE"
+
+  dast:
+    name: 6. DAST (OWASP ZAP)
+    needs: [despliegue, smoke]
+    # Solo producción: los previews están protegidos y ZAP vería solo la pantalla de login de Vercel.
+    if: github.ref_name == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Escaneo pasivo de la app publicada
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: ${{ needs.despliegue.outputs.url }}
+          rules_file_name: .zap/reglas.tsv
+          allow_issue_writing: false
+          fail_action: false
+          artifact_name: reporte-zap
