@@ -36,13 +36,13 @@ const pruebas = [
     return respuesta.status === 200 && texto.includes("<form");
   }],
   ["Detalle con id inválido da 404", async () => (await pedir("/puntos/no-es-uuid")).respuesta.status === 404],
-  ...["/panel", "/admin/auditoria", "/publicaciones", "/recolector", "/acopio", "/admin", "/admin/usuarios"].map((ruta) => [
+  ...["/panel", "/admin/auditoria", "/admin/indicadores", "/acopio/entregas", "/publicaciones", "/recolector", "/acopio", "/admin", "/admin/usuarios"].map((ruta) => [
     `${ruta} exige iniciar sesión`,
     async () => redirigeALogin((await pedir(ruta)).respuesta),
   ]),
   ["Cabeceras de seguridad presentes", async () => {
     const { respuesta } = await pedir("/login");
-    return ["x-frame-options", "x-content-type-options", "referrer-policy", "permissions-policy"].every((c) =>
+    return ["x-frame-options", "x-content-type-options", "referrer-policy", "permissions-policy", "content-security-policy", "strict-transport-security"].every((c) =>
       respuesta.headers.has(c),
     );
   }],
