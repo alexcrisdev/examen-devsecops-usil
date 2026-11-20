@@ -31,7 +31,10 @@ const pruebas = [
     const { respuesta, texto } = await pedir("/registro");
     return respuesta.status === 200 && texto.includes("<form") && texto.includes("recolector");
   }],
-  ["/panel exige iniciar sesión", async () => redirigeALogin((await pedir("/panel")).respuesta)],
+  ...["/panel", "/publicaciones", "/recolector", "/acopio", "/admin", "/admin/usuarios"].map((ruta) => [
+    `${ruta} exige iniciar sesión`,
+    async () => redirigeALogin((await pedir(ruta)).respuesta),
+  ]),
   ["Cabeceras de seguridad presentes", async () => {
     const { respuesta } = await pedir("/login");
     return ["x-frame-options", "x-content-type-options", "referrer-policy", "permissions-policy"].every((c) =>

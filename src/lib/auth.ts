@@ -15,6 +15,8 @@ export async function exigirRol(permitidos: Rol[]) {
     .eq("id", user.id)
     .single();
 
-  if (!perfil || !tienePermiso(perfil.rol, permitidos)) redirect("/login?error=permiso");
+  if (!perfil) redirect("/login?error=permiso");
+  // Con sesión pero sin el rol requerido: acceso denegado (vuelve a su panel con aviso).
+  if (!tienePermiso(perfil.rol, permitidos)) redirect("/panel?aviso=sin-permiso");
   return { supabase, user, perfil: perfil as { id: string; nombre: string; rol: Rol } };
 }
