@@ -25,5 +25,5 @@ export async function proxy(request: NextRequest) {
 
 // AGREGAR aquí cada ruta privada nueva.
 export const config = {
-  matcher: ["/panel/:path*"],
+  matcher: ["/panel/:path*", "/publicaciones/:path*", "/recolector/:path*", "/acopio/:path*", "/admin/:path*"],
 };
