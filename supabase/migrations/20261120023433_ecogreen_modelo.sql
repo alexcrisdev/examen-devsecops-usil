@@ -5,9 +5,9 @@
 -- =====================================================================
 -- 1. Perfiles: nuevos roles y datos del caso
 -- =====================================================================
-update public.perfiles set rol = 'generador' where rol = 'usuario';
-
+-- Primero se quita la regla vieja (admin/usuario) y luego se migran los datos.
 alter table public.perfiles drop constraint if exists perfiles_rol_check;
+update public.perfiles set rol = 'generador' where rol not in ('generador', 'recolector', 'admin_acopio', 'admin');
 alter table public.perfiles
   add constraint perfiles_rol_check check (rol in ('generador', 'recolector', 'admin_acopio', 'admin'));
 alter table public.perfiles alter column rol set default 'generador';
