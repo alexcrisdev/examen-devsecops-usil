@@ -1,26 +1,178 @@
 @import "tailwindcss";
 
+/* ============================================================
+   EcoGreen · sistema visual "papel reciclado + ruta de recojo"
+   ============================================================ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --papel: #f2eee3;     /* fondo kraft claro */
+  --papel-2: #e7e0cd;   /* kraft más tostado */
+  --tinta: #0f2219;     /* casi negro verdoso */
+  --bosque: #0b3b2a;    /* verde principal oscuro */
+  --hoja: #1d7349;      /* verde principal */
+  --brote: #c6ef5e;     /* acento lima (resaltador) */
+  --musgo: #5d7a5a;     /* texto secundario */
+  --linea: #cbc2a9;     /* bordes */
+  --alerta: #b4402a;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --color-papel: var(--papel);
+  --color-papel-2: var(--papel-2);
+  --color-tinta: var(--tinta);
+  --color-bosque: var(--bosque);
+  --color-hoja: var(--hoja);
+  --color-brote: var(--brote);
+  --color-musgo: var(--musgo);
+  --color-linea: var(--linea);
+  --color-alerta: var(--alerta);
+
+  /* colores de contenedor por material */
+  --color-mat-papel: #2e6bb0;
+  --color-mat-carton: #a26b34;
+  --color-mat-plastico: #e2b422;
+  --color-mat-vidrio: #2f9c8a;
+  --color-mat-metal: #7c8790;
+  --color-mat-electronicos: #c8492c;
+
+  --font-sans: var(--font-instrument);
+  --font-display: var(--font-fraunces);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body {
+  background-color: var(--papel);
+  color: var(--tinta);
+  font-family: var(--font-instrument), system-ui, sans-serif;
+  /* grano de papel reciclado */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .2 0 0 0 0 .18 0 0 0 0 .1 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+::selection {
+  background: var(--brote);
+  color: var(--tinta);
+}
+
+:focus-visible {
+  outline: 3px solid var(--brote);
+  outline-offset: 2px;
+}
+
+@layer components {
+/* Titulares editoriales con Fraunces "suave" */
+.titular {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-variation-settings: "SOFT" 100, "WONK" 1;
+  letter-spacing: -0.02em;
+  line-height: 0.95;
+}
+
+/* Subrayado tipo resaltador, ligeramente inclinado */
+.resaltado {
+  background-image: linear-gradient(100deg, transparent 2%, var(--brote) 4%, var(--brote) 94%, transparent 97%);
+  background-size: 100% 0.42em;
+  background-repeat: no-repeat;
+  background-position: 0 88%;
+  padding-inline: 0.06em;
+}
+
+/* Etiqueta en mono para metadatos */
+.etiqueta {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Ticket troquelado */
+.ticket {
+  background: #fffdf6;
+  filter: drop-shadow(0 18px 30px rgb(15 34 25 / 0.18));
+}
+/* muescas laterales a la altura del perforado */
+.muesca {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--papel-2);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.perforado {
+  background-image: linear-gradient(90deg, var(--linea) 50%, transparent 0);
+  background-size: 10px 2px;
+  background-repeat: repeat-x;
+  height: 2px;
+}
+
+/* Cinta de materiales en movimiento */
+@keyframes cinta {
+  to { transform: translateX(-50%); }
+}
+.cinta {
+  animation: cinta 38s linear infinite;
+}
+
+/* Ruta punteada del recolector */
+.ruta {
+  background-image: radial-gradient(circle, var(--hoja) 1.6px, transparent 2px);
+  background-size: 14px 14px;
+  background-repeat: repeat-x;
+  background-position: center;
+}
+
+@keyframes sello {
+  0% { transform: scale(1.6) rotate(-24deg); opacity: 0; }
+  60% { transform: scale(0.92) rotate(-12deg); opacity: 1; }
+  100% { transform: scale(1) rotate(-14deg); opacity: 1; }
+}
+.sello {
+  animation: sello 0.7s 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cinta, .sello { animation: none; }
+}
+
+/* Campos de formulario */
+.campo {
+  width: 100%;
+  border-radius: 0.9rem;
+  border: 1.5px solid var(--linea);
+  background: #fffdf6;
+  padding: 0.7rem 0.95rem;
+  color: var(--tinta);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.campo::placeholder { color: #9a9580; }
+.campo:focus {
+  outline: none;
+  border-color: var(--hoja);
+  box-shadow: 0 0 0 4px rgb(198 239 94 / 0.55);
+}
+
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.8rem 1.4rem;
+  font-weight: 600;
+  transition: transform 0.15s, background-color 0.15s, box-shadow 0.15s;
+}
+.boton:active { transform: translateY(1px); }
+.boton-primario {
+  background: var(--bosque);
+  color: var(--brote);
+  box-shadow: 0 4px 0 0 var(--tinta);
+}
+.boton-primario:hover { background: var(--hoja); color: #fffdf6; }
+.boton-primario:disabled { opacity: 0.55; cursor: not-allowed; }
+.boton-secundario {
+  border: 1.5px solid var(--tinta);
+  color: var(--tinta);
+}
+.boton-secundario:hover { background: var(--tinta); color: var(--papel); }
 }
