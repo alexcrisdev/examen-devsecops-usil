@@ -17,7 +17,7 @@ const MENU: (ItemMenu & { roles: readonly Rol[] })[] = [
   { href: "/publicaciones", texto: "Mis publicaciones", roles: ["generador"] },
   { href: "/recolector", texto: "Material disponible", roles: ["recolector"] },
   { href: "/acopio", texto: "Mi punto de acopio", roles: ["admin_acopio"] },
-  { href: "/admin", texto: "Administración", roles: ["admin"] },
+  { href: "/admin/usuarios", texto: "Usuarios", roles: ["admin"] },
 ];
 
 function seccionDe(ruta: string) {

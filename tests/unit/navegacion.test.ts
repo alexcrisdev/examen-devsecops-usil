@@ -16,8 +16,8 @@ describe("HU-02 acceso y menú por rol", () => {
   });
 
   it("CA1: el menú cambia según el rol", () => {
-    expect(menuPara("admin").map((i) => i.href)).toContain("/admin");
-    expect(menuPara("generador").map((i) => i.href)).not.toContain("/admin");
+    expect(menuPara("admin").map((i) => i.href)).toContain("/admin/usuarios");
+    expect(menuPara("generador").map((i) => i.href)).not.toContain("/admin/usuarios");
     expect(menuPara("recolector").map((i) => i.href)).toContain("/recolector");
     expect(menuPara("admin_acopio").map((i) => i.href)).toContain("/acopio");
   });
