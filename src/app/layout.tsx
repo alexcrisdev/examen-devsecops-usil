@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NOMBRE DEL SISTEMA",
-  description: "Sistema desarrollado con DevSecOps",
+  title: "EcoGreen",
+  description: "EcoGreen: conecta hogares y negocios con recolectores y puntos de acopio de reciclables",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

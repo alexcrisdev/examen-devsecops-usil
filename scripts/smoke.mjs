@@ -27,6 +27,10 @@ const pruebas = [
     const { respuesta, texto } = await pedir("/login");
     return respuesta.status === 200 && texto.includes("<form");
   }],
+  ["Registro muestra el formulario", async () => {
+    const { respuesta, texto } = await pedir("/registro");
+    return respuesta.status === 200 && texto.includes("<form") && texto.includes("recolector");
+  }],
   ["/panel exige iniciar sesión", async () => redirigeALogin((await pedir("/panel")).respuesta)],
   ["Cabeceras de seguridad presentes", async () => {
     const { respuesta } = await pedir("/login");
