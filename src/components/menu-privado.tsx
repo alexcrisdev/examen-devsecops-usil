@@ -8,10 +8,12 @@ type Item = { href: string; texto: string };
 // Menú del área privada. Los items llegan ya filtrados por rol desde el servidor.
 export function MenuPrivado({ items }: { items: Item[] }) {
   const ruta = usePathname();
+  const coincide = (href: string) => ruta === href || (href !== "/panel" && ruta.startsWith(href + "/"));
+  const masEspecifico = items.filter((i) => coincide(i.href)).sort((a, b) => b.href.length - a.href.length)[0]?.href;
   return (
     <nav aria-label="Menú principal" className="flex gap-1 overflow-x-auto">
       {items.map((i) => {
-        const activo = ruta === i.href || (i.href !== "/panel" && ruta.startsWith(i.href + "/"));
+        const activo = i.href === masEspecifico;
         return (
           <Link
             key={i.href}
