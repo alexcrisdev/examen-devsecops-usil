@@ -31,7 +31,12 @@ const pruebas = [
     const { respuesta, texto } = await pedir("/registro");
     return respuesta.status === 200 && texto.includes("<form") && texto.includes("recolector");
   }],
-  ...["/panel", "/publicaciones", "/recolector", "/acopio", "/admin", "/admin/usuarios"].map((ruta) => [
+  ["Directorio público de puntos responde", async () => {
+    const { respuesta, texto } = await pedir("/puntos");
+    return respuesta.status === 200 && texto.includes("<form");
+  }],
+  ["Detalle con id inválido da 404", async () => (await pedir("/puntos/no-es-uuid")).respuesta.status === 404],
+  ...["/panel", "/admin/auditoria", "/publicaciones", "/recolector", "/acopio", "/admin", "/admin/usuarios"].map((ruta) => [
     `${ruta} exige iniciar sesión`,
     async () => redirigeALogin((await pedir(ruta)).respuesta),
   ]),
