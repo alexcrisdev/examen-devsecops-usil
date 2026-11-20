@@ -1,17 +1,25 @@
 import Link from "next/link";
 import { FormularioLogin } from "./formulario";
 
+export const metadata = { title: "Ingresar · EcoGreen" };
+
 export default function PaginaLogin() {
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-6 p-6">
-      <h1 className="text-2xl font-semibold">Iniciar sesión en EcoGreen</h1>
-      <FormularioLogin />
-      <p className="text-sm">
+    <>
+      <p className="etiqueta text-musgo">Bienvenido de vuelta</p>
+      <h1 className="titular mt-3 text-5xl text-bosque">
+        Ingresa a <em className="text-hoja">EcoGreen</em>
+      </h1>
+      <p className="mt-3 text-tinta/70">Sigue la ruta de tus reciclables y tus recojos.</p>
+      <div className="mt-8">
+        <FormularioLogin />
+      </div>
+      <p className="mt-8 text-sm text-tinta/75">
         ¿No tienes cuenta?{" "}
-        <Link href="/registro" className="underline">
-          Regístrate
+        <Link href="/registro" className="font-semibold text-hoja underline decoration-brote decoration-2 underline-offset-4">
+          Regístrate gratis
         </Link>
       </p>
-    </main>
+    </>
   );
 }

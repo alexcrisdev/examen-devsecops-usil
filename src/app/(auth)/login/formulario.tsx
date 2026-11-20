@@ -6,12 +6,12 @@ import { iniciarSesion, type EstadoLogin } from "@/features/auth/actions";
 export function FormularioLogin() {
   const [estado, accion, pendiente] = useActionState<EstadoLogin, FormData>(iniciarSesion, {});
   return (
-    <form action={accion} className="flex w-full max-w-sm flex-col gap-3">
-      <label className="flex flex-col gap-1 text-sm">
+    <form action={accion} className="flex w-full flex-col gap-4">
+      <label className="flex flex-col gap-1.5 text-sm font-medium">
         Correo
-        <input name="email" type="email" required autoComplete="email" className="rounded border px-3 py-2" />
+        <input name="email" type="email" required autoComplete="email" placeholder="tu@correo.com" className="campo" />
       </label>
-      <label className="flex flex-col gap-1 text-sm">
+      <label className="flex flex-col gap-1.5 text-sm font-medium">
         Contraseña
         <input
           name="password"
@@ -19,15 +19,15 @@ export function FormularioLogin() {
           required
           minLength={8}
           autoComplete="current-password"
-          className="rounded border px-3 py-2"
+          className="campo"
         />
       </label>
       {estado.error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="rounded-xl border border-alerta/30 bg-alerta/10 px-4 py-3 text-sm text-alerta">
           {estado.error}
         </p>
       )}
-      <button disabled={pendiente} className="rounded bg-black px-3 py-2 text-white disabled:opacity-50">
+      <button disabled={pendiente} className="boton boton-primario mt-2 w-full">
         {pendiente ? "Ingresando..." : "Ingresar"}
       </button>
     </form>
