@@ -27,6 +27,9 @@ export default function Inicio() {
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
         <Marca />
         <nav className="flex items-center gap-2 sm:gap-6">
+          <Link href="/puntos" className="hidden text-sm font-medium hover:text-hoja md:inline">
+            Puntos de acopio
+          </Link>
           <a href="#como-funciona" className="hidden text-sm font-medium hover:text-hoja md:inline">
             Cómo funciona
           </a>

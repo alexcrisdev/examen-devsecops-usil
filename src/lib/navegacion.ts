@@ -4,6 +4,7 @@ import { ROLES, tienePermiso, type Rol } from "@/lib/roles";
 // Las páginas usan rolesPara() con exigirRol() y el menú se arma con menuPara().
 const SECCIONES: { prefijo: string; roles: readonly Rol[] }[] = [
   { prefijo: "/panel", roles: ROLES },
+  { prefijo: "/puntos", roles: ROLES }, // público; en el menú para usuarios con sesión
   { prefijo: "/publicaciones", roles: ["generador"] },
   { prefijo: "/recolector", roles: ["recolector"] },
   { prefijo: "/acopio", roles: ["admin_acopio"] },
@@ -14,10 +15,12 @@ type ItemMenu = { href: string; texto: string };
 
 const MENU: (ItemMenu & { roles: readonly Rol[] })[] = [
   { href: "/panel", texto: "Inicio", roles: ROLES },
+  { href: "/puntos", texto: "Puntos de acopio", roles: ["generador"] },
   { href: "/publicaciones", texto: "Mis publicaciones", roles: ["generador"] },
   { href: "/recolector", texto: "Material disponible", roles: ["recolector"] },
   { href: "/acopio", texto: "Mi punto de acopio", roles: ["admin_acopio"] },
   { href: "/admin/usuarios", texto: "Usuarios", roles: ["admin"] },
+  { href: "/admin/auditoria", texto: "Auditoría", roles: ["admin"] },
 ];
 
 function seccionDe(ruta: string) {
