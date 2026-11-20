@@ -6,6 +6,7 @@ export const ACCIONES = {
   cambiar_rol: "Cambió un rol",
   crear_punto: "Creó un punto de acopio",
   editar_punto: "Editó un punto de acopio",
+  registrar_entrega: "Registró una entrega en su punto",
   reservar: "Reservó una publicación",
   reserva_denegada: "Intento de reserva denegado",
   liberar: "Liberó una reserva",

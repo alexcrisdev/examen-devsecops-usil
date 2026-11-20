@@ -4,6 +4,8 @@ import { MATERIALES } from "@/lib/materiales";
 import { estaVerificado, misRecojos, publicacionesDisponibles } from "@/features/publicaciones/datos";
 import { accionPublicacion } from "@/features/publicaciones/actions";
 import { esquemaFiltroDisponibles } from "@/features/publicaciones/validacion";
+import { calificacionesDe } from "@/features/impacto/datos";
+import { promedio } from "@/features/impacto/validacion";
 import { filtrarPuntos } from "@/features/puntos/validacion";
 import { TarjetaPublicacion } from "@/components/tarjeta-publicacion";
 
@@ -35,6 +37,7 @@ export default async function PaginaRecolector({ searchParams }: PageProps<"/rec
   const [disponibles, recojos] = verificado
     ? await Promise.all([publicacionesDisponibles(supabase), misRecojos(supabase, user.id)])
     : [[], []];
+  const prom = promedio((await calificacionesDe(supabase, "recolector_id", user.id)).map((c) => c.puntaje));
   const lista = filtrarPuntos(
     disponibles.map((p) => ({ ...p, materiales: [p.material_codigo] })),
     filtro,
@@ -43,7 +46,14 @@ export default async function PaginaRecolector({ searchParams }: PageProps<"/rec
   return (
     <>
       <p className="etiqueta text-musgo">Recolector</p>
-      <h1 className="titular mt-3 text-5xl text-bosque">Material disponible</h1>
+      <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
+        <h1 className="titular text-5xl text-bosque">Material disponible</h1>
+        {prom !== null && (
+          <p className="rounded-full bg-bosque px-4 py-2 text-sm text-papel">
+            Tu calificación <strong className="text-brote">★ {prom}</strong>
+          </p>
+        )}
+      </div>
       {aviso && (
         <p
           role={aviso.ok ? "status" : "alert"}
